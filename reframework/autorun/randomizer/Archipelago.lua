@@ -71,6 +71,9 @@ end
 -- server sends slot data when slot is connected
 function APSlotConnectedHandler(slot_data)
     Archipelago.hasConnectedPrior = true
+	if AutoTab then
+        AutoTab.Reset()
+    end
     GUI.AddText('Connected.')
 
     return Archipelago.SlotDataHandler(slot_data)

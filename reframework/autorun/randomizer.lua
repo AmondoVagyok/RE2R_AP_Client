@@ -15,6 +15,7 @@ Manifest = require("randomizer/Manifest")
 Lookups = require("randomizer/Lookups")
 
 Archipelago = require("randomizer/Archipelago")
+AutoTab = require("randomizer/AutoTab")
 CutsceneObjects = require("randomizer/CutsceneObjects")
 DestroyObjects = require("randomizer/DestroyObjects")
 Enemy = require("randomizer/Enemy")
@@ -63,6 +64,7 @@ re.on_pre_application_entry("UpdateBehavior", function()
         StartingWeapon.Init()
         GUIInventory.Init()
         ItemDuplicates.Init()
+		AutoTab.Init()
 
         if Archipelago.waitingForSync then
             Archipelago.waitingForSync = false
