@@ -63,7 +63,6 @@ re.on_pre_application_entry("UpdateBehavior", function()
         StartingWeapon.Init()
         GUIInventory.Init()
         ItemDuplicates.Init()
-		AutoTab.Init()
 
         if Archipelago.waitingForSync then
             Archipelago.waitingForSync = false
