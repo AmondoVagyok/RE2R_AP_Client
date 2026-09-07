@@ -10,17 +10,12 @@ function Objectives.Init()
 end
 
 function Objectives.GetPurposeGUI()
-    local guiPurpose = Scene.getSceneObject():findGameObject("GUI_Purpose")
-
-    return guiPurpose
+    -- Non-RTX: scene find works. RTX: use GUIMaster.RefPurpose via Scene.getGUIPurpose().
+    return Scene.getGUIPurpose()
 end
 
 function Objectives.Destroy()
-    local guiPurpose = Objectives.GetPurposeGUI()
-
-    if guiPurpose ~= nil then
-        guiPurpose:call("destroy", guiPurpose)
-    end
+    DestroyObjects.RemovePurposeGUI()
 end
 
 return Objectives

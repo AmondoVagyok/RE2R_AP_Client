@@ -6,17 +6,146 @@ Scene.interactManager = nil
 Scene.saveDataManager = nil
 Scene.recordManager = nil
 
-function Scene.getSceneObject()
-    if Scene.sceneObject ~= nil then
-        return Scene.sceneObject
+local function getManagedSingleton(relativeName)
+    local ok, obj = pcall(function()
+        return sdk.get_managed_singleton(sdk.game_namespace(relativeName))
+    end)
+    if ok then
+        return obj
+    end
+    return nil
+end
+
+local function mainFlowCall(methodName, defaultValue)
+    local mfm = Scene.getMainFlowManager()
+    if not mfm then
+        return defaultValue
     end
 
-    Scene.sceneObject = sdk.call_native_func(sdk.get_native_singleton("via.SceneManager"), sdk.find_type_definition("via.SceneManager"), "get_CurrentScene()")
+    local ok, result = pcall(function()
+        return mfm:call(methodName)
+    end)
+    if ok and result ~= nil then
+        return result
+    end
+    return defaultValue
+end
+
+local function mainFlowFlag(methodName)
+    return mainFlowCall(methodName, false) == true
+end
+
+function Scene.getSceneObject()
+    local ok, currentScene = pcall(function()
+        return sdk.call_native_func(
+            sdk.get_native_singleton("via.SceneManager"),
+            sdk.find_type_definition("via.SceneManager"),
+            "get_CurrentScene()"
+        )
+    end)
+    if ok and currentScene ~= nil then
+        Scene.sceneObject = currentScene
+        return currentScene
+    end
 
     return Scene.sceneObject
 end
 
+-- RTX: never rely on scene:findGameObject("UIMaster").
+function Scene.getGUIMaster()
+    return getManagedSingleton("gui.GUIMaster")
+end
+
+function Scene.findGameObjectByName(name)
+    local scene = Scene.getSceneObject()
+    if scene then
+        -- typed call first; :findGameObject(name) is overloaded and often returns nil on RTX
+        local ok, obj = pcall(function()
+            return scene:call("findGameObject(System.String)", name)
+        end)
+        if ok and obj ~= nil then
+            return obj
+        end
+
+        ok, obj = pcall(function()
+            return scene:findGameObject(name)
+        end)
+        if ok and obj ~= nil then
+            return obj
+        end
+    end
+
+    return nil
+end
+
+-- RTX: walk GUIMaster's in-game folder children (scene find often returns nil :/ ).
+function Scene.findGameObjectInGuiInGameFolder(name)
+    local gui = Scene.getGUIMaster()
+    if not gui then
+        return nil
+    end
+
+    local okFolder, folder = pcall(function()
+        return gui:call("get_GuiInGameFolder")
+    end)
+    if not okFolder or folder == nil then
+        return nil
+    end
+
+    local okChildren, children = pcall(function()
+        return folder:call("get_Children")
+    end)
+    if not okChildren or children == nil then
+        return nil
+    end
+
+    local list = children
+    if children.get_elements then
+        local okEls, els = pcall(function()
+            return children:get_elements()
+        end)
+        if okEls and els then
+            list = els
+        end
+    end
+
+    for _, transform in pairs(list) do
+        if transform ~= nil then
+            local okGo, go = pcall(function()
+                return transform:call("get_GameObject")
+            end)
+            if okGo and go ~= nil then
+                local okName, goName = pcall(function()
+                    return go:call("get_Name")
+                end)
+                if okName and goName == name then
+                    return go
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
+local function getGuiObject(name)
+    return Scene.findGameObjectByName(name) or Scene.findGameObjectInGuiInGameFolder(name)
+end
+
+function Scene.getGUIPurpose()
+    return getGuiObject("GUI_Purpose")
+end
+
+function Scene.getGUIItemBox()
+    return getGuiObject("GUI_ItemBox")
+end
+
+function Scene.getGUIInventory()
+    return getGuiObject("GUI_NewInventory")
+end
+
 function Scene.getGameMaster()
+    -- Prefer Masters tag (non-RTX). RTX often fails this lookup.
     return Scene.getMasterObject("30_GameMaster")
 end
 
@@ -25,18 +154,25 @@ function Scene.getGimmickMaster()
 end
 
 function Scene.getMasterObject(objectName)
-    local masters = Scene.getSceneObject():findGameObjectsWithTag("Masters")
-    local foundMaster = nil
+    local scene = Scene.getSceneObject()
+    if not scene then
+        return nil
+    end
 
-    for k, master in pairs(masters) do
-        if master:get_Name() == objectName then
-            foundMaster = master
+    local ok, masters = pcall(function()
+        return scene:findGameObjectsWithTag("Masters")
+    end)
+    if not ok or masters == nil then
+        return nil
+    end
 
-            break
+    for _, master in pairs(masters) do
+        if master ~= nil and master:get_Name() == objectName then
+            return master
         end
     end
 
-    return foundMaster
+    return nil
 end
 
 function Scene.getMainFlowManager()
@@ -44,9 +180,26 @@ function Scene.getMainFlowManager()
         return Scene.mainFlowManager
     end
 
-    local gameMaster = Scene.getGameMaster()
+    -- RTX: Masters-tag GameMaster lookup is flaky and makes isInGame() flicker.
+    Scene.mainFlowManager = getManagedSingleton("gamemastering.MainFlowManager")
+    if Scene.mainFlowManager ~= nil then
+        return Scene.mainFlowManager
+    end
 
-    Scene.mainFlowManager = gameMaster:call("getComponent(System.Type)", sdk.typeof(sdk.game_namespace("gamemastering.MainFlowManager")))
+    local gameMaster = Scene.getGameMaster()
+    if gameMaster == nil then
+        return nil
+    end
+
+    local ok, mfm = pcall(function()
+        return gameMaster:call(
+            "getComponent(System.Type)",
+            sdk.typeof(sdk.game_namespace("gamemastering.MainFlowManager"))
+        )
+    end)
+    if ok then
+        Scene.mainFlowManager = mfm
+    end
 
     return Scene.mainFlowManager
 end
@@ -56,9 +209,25 @@ function Scene.getInteractManager()
         return Scene.interactManager
     end
 
-    local gimmickMaster = Scene.getGimmickMaster()
+    Scene.interactManager = getManagedSingleton("gimmick.action.InteractManager")
+    if Scene.interactManager ~= nil then
+        return Scene.interactManager
+    end
 
-    Scene.interactManager = gimmickMaster:call("getComponent(System.Type)", sdk.typeof(sdk.game_namespace("gimmick.action.InteractManager")))
+    local gimmickMaster = Scene.getGimmickMaster()
+    if gimmickMaster == nil then
+        return nil
+    end
+
+    local ok, im = pcall(function()
+        return gimmickMaster:call(
+            "getComponent(System.Type)",
+            sdk.typeof(sdk.game_namespace("gimmick.action.InteractManager"))
+        )
+    end)
+    if ok then
+        Scene.interactManager = im
+    end
 
     return Scene.interactManager
 end
@@ -68,9 +237,25 @@ function Scene.getSaveDataManager()
         return Scene.saveDataManager
     end
 
-    local gameMaster = Scene.getGameMaster()
+    Scene.saveDataManager = getManagedSingleton("gamemastering.SaveDataManager")
+    if Scene.saveDataManager ~= nil then
+        return Scene.saveDataManager
+    end
 
-    Scene.saveDataManager = gameMaster:call("getComponent(System.Type)", sdk.typeof(sdk.game_namespace("gamemastering.SaveDataManager")))
+    local gameMaster = Scene.getGameMaster()
+    if gameMaster == nil then
+        return nil
+    end
+
+    local ok, sdm = pcall(function()
+        return gameMaster:call(
+            "getComponent(System.Type)",
+            sdk.typeof(sdk.game_namespace("gamemastering.SaveDataManager"))
+        )
+    end)
+    if ok then
+        Scene.saveDataManager = sdm
+    end
 
     return Scene.saveDataManager
 end
@@ -80,22 +265,60 @@ function Scene.getRecordManager()
         return Scene.recordManager
     end
 
-    local gameMaster = Scene.getGameMaster()
+    Scene.recordManager = getManagedSingleton("gamemastering.RecordManager")
+    if Scene.recordManager ~= nil then
+        return Scene.recordManager
+    end
 
-    Scene.recordManager = gameMaster:call("getComponent(System.Type)", sdk.typeof(sdk.game_namespace("gamemastering.RecordManager")))
+    local gameMaster = Scene.getGameMaster()
+    if gameMaster == nil then
+        return nil
+    end
+
+    local ok, rm = pcall(function()
+        return gameMaster:call(
+            "getComponent(System.Type)",
+            sdk.typeof(sdk.game_namespace("gamemastering.RecordManager"))
+        )
+    end)
+    if ok then
+        Scene.recordManager = rm
+    end
 
     return Scene.recordManager
 end
 
 function Scene.getSurvivorType()
-    local gameMaster = Scene.getGameMaster()
-    local survivorManager = gameMaster:call("getComponent(System.Type)", sdk.typeof(sdk.game_namespace("SurvivorManager")))
-    local survivors = survivorManager:get_field("ExistSurvivorInfoList")
+    local survivorManager = getManagedSingleton("SurvivorManager")
+    if survivorManager == nil then
+        local gameMaster = Scene.getGameMaster()
+        if gameMaster == nil then
+            return -1
+        end
 
-    for _, survivor in pairs(survivors:get_field("mItems")) do
+        local ok, sm = pcall(function()
+            return gameMaster:call(
+                "getComponent(System.Type)",
+                sdk.typeof(sdk.game_namespace("SurvivorManager"))
+            )
+        end)
+        if not ok then
+            return -1
+        end
+        survivorManager = sm
+    end
+    if survivorManager == nil then
+        return -1
+    end
+
+    local survivors = survivorManager:get_field("ExistSurvivorInfoList")
+    if survivors == nil then
+        return -1
+    end
+
+    for _, survivor in pairs(survivors:get_field("mItems") or {}) do
         if survivor then
             local isActive = survivor:get_field("<IsActivePlayer>k__BackingField")
-
             if isActive then
                 return survivor:get_field("<SurvivorType>k__BackingField")
             end
@@ -106,71 +329,98 @@ function Scene.getSurvivorType()
 end
 
 function Scene.getScenarioType()
-    local mainFlowManager = Scene.getMainFlowManager();
-    
-    if mainFlowManager ~= nil then
-        local scenarioTypeSetting = mainFlowManager:call("get_CurrentScenarioType")
-
-        if scenarioTypeSetting ~= nil then
-            return scenarioTypeSetting
-        end
-
-        return -1
-    end
-
-    return -1 
+    return mainFlowCall("get_CurrentScenarioType", -1)
 end
 
 function Scene.getDifficulty()
-    local mainFlowManager = Scene.getMainFlowManager();
-    
-    if mainFlowManager ~= nil then
-        local difficultySetting = mainFlowManager:call("get_CurrentDifficulty")
-
-        if difficultySetting ~= nil then
-            return difficultySetting
-        end
-
-        return -1
-    end
-
-    return -1
-end
-
-function Scene.getGUIItemBox()
-    return Scene.getSceneObject():findGameObject("GUI_ItemBox")
-end
-
-function Scene.getGUIInventory()
-    return Scene.getSceneObject():findGameObject("GUI_NewInventory")
+    return mainFlowCall("get_CurrentDifficulty", -1)
 end
 
 function Scene.isTitleScreen()
-    return Scene.getMainFlowManager():get_IsInTitle()
+    return mainFlowFlag("get_IsInTitle")
 end
 
 function Scene.isInGame()
-    return Scene.getMainFlowManager():get_IsInGame()
+    return mainFlowFlag("get_IsInGame")
 end
 
 function Scene.isInPause()
-    return Scene.getMainFlowManager():get_IsInPause()
+    return mainFlowFlag("get_IsInPause")
 end
 
 function Scene.isGameOver()
-    return Scene.getMainFlowManager():get_IsInGameOver()
+    return mainFlowFlag("get_IsInGameOver")
 end
 
 function Scene.goToGameOver()
-    return Scene.getMainFlowManager():call("goGameOver", nil)
+    return mainFlowCall("goGameOver", nil)
+end
+
+-- RTX-safe: RefPurpose.get_Target is often null, but GUIMaster.closePurpose works.
+function Scene.closePurposeGUI()
+    local gui = Scene.getGUIMaster()
+    if not gui then
+        return false
+    end
+
+    local ok = pcall(function()
+        gui:call("closePurpose(System.Boolean)", true)
+    end)
+    if ok then
+        return true
+    end
+
+    ok = pcall(function()
+        gui:call("closePurpose", true)
+    end)
+    return ok
 end
 
 function Scene.isUsingItemBox()
-    return Scene.getGUIItemBox():get_DrawSelf() -- is the ItemBox GUI "drawn"?
+    -- RTX: DrawSelf is unreliable; use GUIMaster.
+    local gui = Scene.getGUIMaster()
+    if gui then
+        local ok, busy = pcall(function()
+            return gui:call("isBusyItemBox")
+        end)
+        if ok and busy ~= nil then
+            return busy == true
+        end
+    end
+
+    local guiBox = Scene.getGUIItemBox()
+    if not guiBox then
+        return false
+    end
+
+    local ok, drawn = pcall(function()
+        return guiBox:get_DrawSelf()
+    end)
+    return ok and drawn == true
 end
 
 function Scene.isUsingInventory()
-    return Scene.getGUIInventory():get_DrawSelf() -- is the Inventory GUI "drawn"?
+    -- RTX: DrawSelf often fails even while inventory is open.
+    -- GUIMaster.get_IsOpenInventory is the reliable flag (same idea as RE3).
+    local gui = Scene.getGUIMaster()
+    if gui then
+        local ok, open = pcall(function()
+            return gui:call("get_IsOpenInventory")
+        end)
+        if ok and open ~= nil then
+            return open == true
+        end
+    end
+
+    local guiInv = Scene.getGUIInventory()
+    if not guiInv then
+        return false
+    end
+
+    local ok, drawn = pcall(function()
+        return guiInv:get_DrawSelf()
+    end)
+    return ok and drawn == true
 end
 
 function Scene.isCharacterLeon()
@@ -218,19 +468,19 @@ function Scene.isDifficultyHardcore()
 end
 
 function Scene.getCurrentLocation()
-    return Scene.getMainFlowManager():get_LoadLocation()
+    return mainFlowCall("get_LoadLocation", nil)
 end
 
 function Scene.getCurrentArea()
-    return Scene.getMainFlowManager():get_LoadArea()
+    return mainFlowCall("get_LoadArea", nil)
 end
 
 function Scene.getGameGUID()
-    return Scene.getMainFlowManager():get_GameGUID()
+    return mainFlowCall("get_GameGUID", nil)
 end
 
 function Scene.getSaveGUID()
-    return Scene.getMainFlowManager():get_SaveGUID()
+    return mainFlowCall("get_SaveGUID", nil)
 end
 
 return Scene

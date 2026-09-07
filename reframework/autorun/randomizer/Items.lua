@@ -125,12 +125,14 @@ function Items.SetupInteractHook()
             -- this was changed from Marvin's location to the vault spot in Operations Room because that spot triggers a guaranteed autosave
             if item_name == "sm49_313_GoThroughMotion" and (item_folder_path == "RopewayContents/World/Location_RPD/LocationLevel_RPD/LocationFsm_RPD/S02_0100/Leon_S02_0100/1FW/MissionRoom/UpperWindow" or item_folder_path == "RopewayContents/World/Location_RPD/LocationLevel_RPD/LocationFsm_RPD/S02_0100/Claire_S02_0100/1FW/MissionRoom/UpperWindow") then
                 Storage.talkedToMarvin = true
+                Storage.Update()
             end
 
             -- ... but if the player got early Bolt Cutters and skips the autosave at Ops Room vault spot, also set the flag at Fire Escape
             --     (It's the same interact for both players.)
             if item_name == "AutoSaveArea_1st" and item_folder_path == "RopewayContents/World/Location_RPD/LocationLevel_RPD/LocationFsm_RPD/S02_0200/OutdoorSouth" then
                 Storage.talkedToMarvin = true
+                Storage.Update()
             end
 
             -- when Claire interacts with the Chief's door with the Heart Key, set a flag so we can remove the East Hallway 2F shutter (since she doesn't get square crank)
@@ -152,7 +154,7 @@ function Items.SetupInteractHook()
 
             -- If we're starting Ada's part, get the trigger to end the Ada event, send Ada to it, and trigger it
             if location_to_check['item_object'] == 'CheckPoint_StartAdaPart' then
-                local leonStart = Scene.getSceneObject():findGameObject("WW_AdaEndEvent_EV580")
+                local leonStart = Scene.findGameObjectByName("WW_AdaEndEvent_EV580")
                 local leonStartInteract = leonStart:call("getComponent(System.Type)", sdk.typeof(sdk.game_namespace("gimmick.action.InteractBehavior")))
                 local leonStartTrigger = leonStartInteract:call("getTrigger", 0)
 
@@ -175,7 +177,7 @@ function Items.SetupInteractHook()
                 Player.WarpToPosition(Vector3f.new(47.86, 0.95, -205.94)) -- warp beside the final sherry cutscene
 
                 -- now, activate the final sherry cutscene
-                local sherryEnd = Scene.getSceneObject():findGameObject("OrphanAsylum_PlayEvent_EV400")
+                local sherryEnd = Scene.findGameObjectByName("OrphanAsylum_PlayEvent_EV400")
                 local sherryEndInteract = sherryEnd:call("getComponent(System.Type)", sdk.typeof(sdk.game_namespace("gimmick.action.InteractBehavior")))
                 local sherryEndFSM = sherryEndInteract:call("getTrigger", 0).Feedbacks[0]
                 sherryEndFSM:call("execute")
@@ -232,11 +234,12 @@ function Items.SetupDisconnectWaitHook()
     -- small hook that handles cancelling inventory UIs when having connected before and being not reconnected
     sdk.hook(guiNewInventoryMethod, function (args)
         if Items.cancelNextUI then
-            local uiMaster = Scene.getSceneObject():findGameObject("UIMaster")
-            local compGuiMaster = uiMaster:call("getComponent(System.Type)", sdk.typeof(sdk.game_namespace("gui.GUIMaster")))
-
+            -- RTX: scene find("UIMaster") fails; use the GUIMaster singleton.
+            local compGuiMaster = Scene.getGUIMaster()
             Items.cancelNextUI = false
-            compGuiMaster:closeInventoryForce()
+            if compGuiMaster then
+                compGuiMaster:closeInventoryForce()
+            end
         end
     end)
 end
