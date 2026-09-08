@@ -457,7 +457,25 @@ function Scene.isUsingInventory()
 end
 
 function Scene.isUsingMap()
-    return Scene.getGUIMap():get_DrawSelf() -- is the Map GUI "drawn"?
+    local gui = Scene.getGUIMaster()
+    if gui then
+        local ok, open = pcall(function()
+            return gui:call("get_IsOpenMap")
+        end)
+        if ok and open ~= nil then
+            return open == true
+        end
+    end
+
+    local guiMap = Scene.getGUIMap()
+    if not guiMap then
+        return false
+    end
+
+    local ok, drawn = pcall(function()
+        return guiMap:get_DrawSelf()
+    end)
+    return ok and drawn == true
 end
 
 function Scene.isCharacterLeon()
