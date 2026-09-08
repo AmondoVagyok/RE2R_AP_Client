@@ -71,7 +71,7 @@ function Items.SetupInteractHook()
                 end
             else 
                 -- non-item things like typewriters here, so do typewriter interaction tracking
-                if string.match(item_name, "Typewriter") then
+                if string.match(item_name, "Typewriter") or item_name == "CheckPoint_NTyrant" then
                     if not Typewriters.unlocked_typewriters[item_name] then
                         Typewriters.AddUnlockedText("", item_name)
                     end
@@ -116,6 +116,13 @@ function Items.SetupInteractHook()
                 return
             end
 
+            -- Maintenance room ladder after G1 fight
+            if item_name == "sm49_005_TerrainLadder_SherryLadder_control" and item_folder_path == "RopewayContents/World/Location_RPD_B1/LocationLevel_RPD_B1/LocationFsm_RPD_B1/S02_0400/AREA_G1/SherryLadder" then
+                GUI.AddText("You can return to RPD by walking through the closed Secret Room door.")
+                Storage.finishedG1 = true
+            end
+
+            -- Inside the cable car that goes to Labs, on the Sewers side
             if item_name == "ScenarioNoAdovance_s05_0000" and item_folder_path == "RopewayContents/World/Location_WasteWater/LocationLevel_WasteWater/LocationFsm_WasteWater/common" then
                 GUI.AddText("Warning: Once you leave for Labs, returning to Sewers can cause a softlock.")
                 GUI.AddText("It is recommended that you complete all of the checks in Sewers prior to leaving.")
@@ -186,6 +193,47 @@ function Items.SetupInteractHook()
             end
             -- END Sherry Skip
         
+            -- START G3 Typewriter Disabling
+
+            -- Entering the G3 fight room before the fight is active, from the direction of the main Labs elevator hub
+            if item_name == 'AT_G3Stop' and string.find(item_folder_path, "Location_Laboratory") then
+                GUI.AddText("Warning: Starting the boss fight with G3 will disable your typewriter teleports.")
+                GUI.AddText("Typewriter teleports will be re-enabled once you are past the Ada/Sherry cutscene after G3.")
+                GUI.AddText("If you haven't already hinted your Joint Plug, now would be a good time to.")
+            end
+
+            -- Starting the G3 fight
+            if item_name == "AT_G3StartToEV730" and string.find(item_folder_path, "Location_Laboratory") then
+                GUI.AddText("Typewriter teleports are disabled until you are past the Ada/Sherry cutscene after G3.")
+                Storage.typewritersActive = false
+            end
+            
+            -- Leon and Ada on the bridge in Labs
+            if item_name == "AT_AfterAdaFallCenterLiftOpen" and string.find(item_folder_path, "Location_Laboratory") and not Storage.typewritersActive then
+                GUI.AddText("Typewriter teleports are re-enabled.")
+                Storage.typewritersActive = true
+            end
+
+            -- Claire talking to Sherry and watching Annette die
+            if item_name == "CFPlay_EV750" and string.find(item_folder_path, "Location_Laboratory") and not Storage.typewritersActive then
+                GUI.AddText("Typewriter teleports are re-enabled.")
+                Storage.typewritersActive = true
+            end
+
+            -- Leon stepping inside the Labs lift to go down to the escape, as a safeguard to re-enable typewriter teleports
+            if item_name == "AT_InCenterLift" and string.find(item_folder_path, "Location_Laboratory") and not Storage.typewritersActive then
+                GUI.AddText("Typewriter teleports are re-enabled.")
+                Storage.typewritersActive = true
+            end
+
+            -- Claire and Sherry riding the Labs lift down to the escape, as a safeguard to re-enable typewriter teleports
+            if item_name == "Laboratory_Sherry" and string.find(item_folder_path, "LocationFsm_NpcControl") and not Storage.typewritersActive then
+                GUI.AddText("Typewriter teleports are re-enabled.")
+                Storage.typewritersActive = true
+            end
+
+            -- END G3 Typewriter Disabling
+
             local isLocationRandomized = Archipelago.IsLocationRandomized(location_to_check)
             local isSentChessPanel = Archipelago.IsSentChessPanel(location_to_check)
 

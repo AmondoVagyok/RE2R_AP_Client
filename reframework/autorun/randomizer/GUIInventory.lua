@@ -14,8 +14,8 @@ function GUIInventory.Init()
 end
 
 function GUIInventory.CheckForAndDisplayMessages()
-    -- only show the hint text when the REF windows aren't showing, and the player isn't using the item box, and the player IS in their inventory
-    if reframework:is_drawing_ui() or not Scene.isUsingInventory() then
+    -- only show the hint text when the REF windows aren't showing, and the player isn't using the item box or their map, and the player IS in their inventory
+    if reframework:is_drawing_ui() or not Scene.isUsingInventory() or Scene.isUsingMap() then
         return
     end
 

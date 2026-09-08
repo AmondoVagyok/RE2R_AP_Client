@@ -13,7 +13,7 @@ end
 
 function Enemy.SetupEnemyDeadHook()
     local hpType = sdk.find_type_definition(sdk.game_namespace("EnemyController"))
-    local dead_method = hpType:get_method("applyDead")
+    local dead_method = hpType:get_method("dead") -- was "applyDead", but applyDead triggers when an already-dead enemy is loaded in too
 
     sdk.hook(dead_method, function(args)
         local compEnemy = sdk.to_managed_object(args[2])
@@ -68,6 +68,11 @@ function Enemy.SetupEnemyDeadHook()
             end
 
             return
+        end
+
+        -- if killsanity isn't enabled in this rando, nothing to do here
+        if Archipelago.killsanity == nil or string.lower(Archipelago.killsanity) == "none" then
+            return  
         end
 
         local isLocationRandomized = Archipelago.IsLocationRandomized(location_to_check)

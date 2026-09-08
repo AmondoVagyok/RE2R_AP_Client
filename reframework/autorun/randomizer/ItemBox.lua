@@ -111,7 +111,6 @@ function ItemBox.DedupeCheck()
     end
 
     local itemName = ItemBox.waiting_to_dedupe
-    local found = ItemBox.found_dedupe
     local itemLocker = ItemBox.GetAnyAvailable()
 
     if itemLocker ~= nil then
@@ -122,6 +121,7 @@ function ItemBox.DedupeCheck()
             local gimmickItemLockerControlComponent = itemLocker:call("getComponent(System.Type)", sdk.typeof(sdk.game_namespace("gimmick.action.GimmickItemLockerControl")))
             local storageItems = gimmickItemLockerControlComponent:get_field("StorageItems")
             local mItems = storageItems:get_field("mItems")
+            local firstIndex
 
             for k, v in pairs(mItems) do
                 if v ~= nil then

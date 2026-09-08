@@ -9,6 +9,7 @@ Archipelago.ammo_pack_modifier = nil -- comes over in slot data
 Archipelago.ammo_pack_type_amount = {} -- used if pack modifier is "random by type"
 Archipelago.damage_traps_can_kill = false -- comes over in slot data
 Archipelago.death_link = false -- comes over in slot data
+Archipelago.killsanity = nil -- comes over in slot data
 Archipelago.hasConnectedPrior = false -- keeps track of whether the player has connected at all so players don't have to remove AP mod to play vanilla
 Archipelago.isInit = false -- keeps track of whether init things like handlers need to run
 Archipelago.waitingForSync = false -- randomizer calls APSync when "waiting for sync"; i.e., when you die
@@ -123,6 +124,10 @@ function Archipelago.SlotDataHandler(slot_data)
 
     if slot_data.death_link ~= nil then
         Archipelago.death_link = slot_data.death_link
+    end
+
+    if slot_data.killsanity ~= nil then
+        Archipelago.killsanity = slot_data.killsanity  
     end
 
     Lookups.Load(slot_data.character, slot_data.scenario, string.lower(slot_data.difficulty))
@@ -329,7 +334,7 @@ function Archipelago.PrintJSONHandler(json_rows)
             item_id = tonumber(row["text"])            
             
             if (row["flags"] & 1) > 0 then
-                item_color = "ce28f7"
+                item_color = AP_REF.APProgessionColor
             elseif (row["flags"] & 2) > 0 then
                 item_color = AP_REF.APUsefulColor
             elseif (row["flags"] & 4) > 0 then
@@ -489,8 +494,13 @@ end
 
 function Archipelago.SanitizeLocationData(location_data)
     -- remove any character in an item or parent name that is not a letter, number, space, or a handful of symbols
-    location_data['item_object'] = location_data['item_object']:gsub("[^A-Za-z0-9()'-_ ]", "")
-    location_data['parent_object'] = location_data['parent_object']:gsub("[^A-Za-z0-9()'-_ ]", "")
+    if location_data['item_object'] ~= nil then
+        location_data['item_object'] = location_data['item_object']:gsub("[^A-Za-z0-9()'-_ ]", "")
+    end
+
+    if location_data['parent_object'] ~= nil then
+        location_data['parent_object'] = location_data['parent_object']:gsub("[^A-Za-z0-9()'-_ ]", "")
+    end
 
     return location_data
 end
@@ -513,7 +523,7 @@ function Archipelago.SendLocationCheck(location_data, warn_existing_location)
         -- if so, show a message; if not, just bail out of here since there's nothing to send
         local location_existing = Archipelago._GetLocationFromLocationData(location_data, true)
 
-        if not location_existing['id'] or (location_existing['id'] ~= nil and tonumber(location_existing['id']) < 0) then
+        if not location_existing or not location_existing['id'] or (location_existing['id'] ~= nil and tonumber(location_existing['id']) < 0) then
             GUI.AddTexts({
                 { message="Invalid location.", color=AP_REF.HexToImguiColor('fa3d2f') },
                 { message=" You tried to check " },
@@ -548,6 +558,10 @@ function Archipelago.SendLocationCheck(location_data, warn_existing_location)
     end
 
     local sent_loc = location['raw_data']    
+
+    if not sent_loc then
+        return true  
+    end
 
     for k, loc in pairs(Lookups.locations) do
         -- StartArea/SherryRoom is the shotgun shell location at start of Labs that can *also* be a shotgun if you haven't gotten one
@@ -631,6 +645,16 @@ function Archipelago.ReceiveItem(item_name, sender, is_randomized)
     if item_ref and item_number then
         local itemId, weaponId, weaponParts, bulletId, count = nil
 
+        -- first, add the item to the received items list so the player can re-receive at any time
+        local receivedItemsIncludesThisItem = false
+        for k, v in pairs(Storage.receivedItemNames) do
+            if v == item_name then receivedItemsIncludesThisItem = true end
+        end
+        
+        if not receivedItemsIncludesThisItem then
+            table.insert(Storage.receivedItemNames, item_name)            
+        end
+
         if item_ref.type == "Weapon" or item_ref.type == "Subweapon" then
             itemId = -1
             weaponId = item_number
@@ -692,7 +716,7 @@ function Archipelago.ReceiveItem(item_name, sender, is_randomized)
         end
 
         if item_ref.progression == 1 then
-            item_color = "ce28f7"
+            item_color = AP_REF.APProgessionColor
         elseif item_ref.type ~= "Lore" and item_ref.type ~= "Trap" then
             item_color = AP_REF.APUsefulColor
         elseif item_ref.type == "Trap" then
@@ -790,8 +814,26 @@ function Archipelago._GetLocationFromLocationData(location_data, include_sent_lo
     local scenario_suffix = " (" .. string.upper(string.sub(Lookups.character, 1, 1) .. Lookups.scenario) .. ")"
     local scenario_suffix_hardcore = " (" .. string.upper(string.sub(Lookups.character, 1, 1) .. Lookups.scenario) .. "H)"
 
+    -- not sure when this is used
     if location_data['id'] and not location_data['name'] then
         location_data['name'] = AP_REF.APClient:get_location_name(location_data['id'], player['game'])
+
+        return {
+            id = location_data['id'],
+            name = location_data['name'],
+            raw_data = {}
+        }
+    end
+
+    -- will be eventually used by killsanity, if not other things
+    if location_data['name'] and not location_data['id'] then
+        location_data['id'] = AP_REF.APClient:get_location_id(location_data['name'], player['game'])
+
+        return {
+            id = location_data['id'],
+            name = location_data['name'],
+            raw_data = {}
+        }
     end
 
     -- if the difficulty is hardcore, loop first looking for hardcore locations only so we can prioritize matching those

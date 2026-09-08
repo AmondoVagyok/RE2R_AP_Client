@@ -4,6 +4,7 @@ GUI.lastText = os.time()
 GUI.lastScenarioCheck = nil
 GUI.lastDifficultyCheck = nil
 GUI.lastVersionCheck = nil
+GUI.lastRTXCheck = nil
 GUI.logo = nil
 GUI.font = "Prompt-Medium.ttf"
 GUI.font_size = 24
@@ -103,7 +104,8 @@ function GUI.AddReceivedItemText(item_name, item_color, sendingPlayer, selfPlaye
     table.insert(textObjects, { message=item_name, color=AP_REF.HexToImguiColor(item_color) })
     
     if sendingPlayer and sendingPlayer ~= selfPlayer then
-        table.insert(textObjects, { message=" from " .. sendingPlayer })
+        table.insert(textObjects, { message=" from " })
+        table.insert(textObjects, { message=sendingPlayer, color = AP_REF.HexToImguiColor(AP_REF.APOtherPlayerColor) })
     end
 
     if sentToBox then
@@ -118,9 +120,12 @@ end
 -- sending item to another player
 function GUI.AddSentItemText(player_sender, item_name, item_color, player_receiver, location)
     GUI.AddTexts({
-        { message=player_sender .. " sent " },
+        { message=player_sender, color=AP_REF.HexToImguiColor(AP_REF.APCurrentPlayerColor) },
+        { message=" sent " },
         { message=AP_REF.Sanitize(item_name), color=AP_REF.HexToImguiColor(item_color) },
-        { message=" to " .. player_receiver .. "!" }
+        { message=" to " },
+        { message=player_receiver, color=AP_REF.HexToImguiColor(AP_REF.APOtherPlayerColor) },
+        { message="!"}
     })
 end
 
@@ -219,6 +224,42 @@ function GUI.CheckVersionWarning()
     end
 
     GUI.lastVersionCheck = os.time()
+end
+
+function GUI.CheckRTXWarning(shouldBeRTX)
+    if GUI.lastRTXCheck ~= nil and os.time() - GUI.lastRTXCheck < 17 then -- 17 seconds
+        return
+    end
+
+    -- allows for checking from both the non-rtx and the rtx client, just with a different arg
+    if not shouldBeRTX then shouldBeRTX = false end
+
+    local isRTX = Scene.isRTX()
+ 
+    -- easy way to test for RTX without switching to RTX
+    --isRTX = not isRTX
+
+    if isRTX ~= shouldBeRTX then
+        GUI.AddTexts({
+            { message="You are using this AP mod on the " },
+            { message="wrong version", color=AP_REF.HexToImguiColor('fa3d2f')},
+            { message=" of the game." },
+        }, 1) -- add to the front of the messages, at index 1
+        
+        GUI.AddTexts({
+            { message="For this AP mod, " },
+            { message="you must use the " .. ((shouldBeRTX and "RTX") or "non-RTX"), color=AP_REF.HexToImguiColor('fa3d2f') },
+            { message=" version of the game." }    
+        }, 2) -- add this right after the message above
+
+        GUI.AddTexts({
+            { message="See " },
+            { message="step 1 of the Setup Guide", color=AP_REF.HexToImguiColor('fa3d2f') },
+            { message=" for more information." }
+        }, 3) -- add this right after the message above
+    end
+
+    GUI.lastRTXCheck = os.time()
 end
 
 function GUI.ConvertColorFromText(color)

@@ -4,6 +4,9 @@ Storage.lastReceivedItemIndex = -1
 Storage.lastSavedItemIndex = -1
 Storage.talkedToMarvin = false
 Storage.openedChiefDoor = false
+Storage.finishedG1 = false
+Storage.typewritersActive = true
+Storage.receivedItemNames = {}
 
 function Storage.Load()
     local existing_file = json.load_file(Storage.GetFilePath())
@@ -15,8 +18,11 @@ function Storage.Load()
         Storage.lastSavedItemIndex = existing_file['last_saved']
         Storage.talkedToMarvin = existing_file['talked_to_marvin'] or false
         Storage.openedChiefDoor = existing_file['opened_chief_door'] or false
+        Storage.finishedG1 = existing_file['finished_g1'] or false
         Storage.swappedStartingWeapon = existing_file['swapped_starting_weapon'] or false
-        
+        Storage.typewritersActive = existing_file['typewriters_active'] or true
+        Storage.receivedItemNames = existing_file['received_item_names'] or {}  
+
         for k, typewriter in pairs(unlocked_typewriters) do
             Typewriters.Unlock("", typewriter)
         end
@@ -40,7 +46,10 @@ function Storage.Update()
         last_saved = Storage.lastSavedItemIndex, 
         talked_to_marvin = Storage.talkedToMarvin,
         opened_chief_door = Storage.openedChiefDoor,
+        finished_g1 = Storage.finishedG1,
         swapped_starting_weapon = Storage.swappedStartingWeapon,
+        typewriters_active = Storage.typewritersActive,
+        received_item_names = Storage.receivedItemNames,
         unlocked_typewriters = Typewriters.GetAllUnlocked() 
     }
 
@@ -66,7 +75,10 @@ function Storage.Reset()
     Storage.lastSavedItemIndex = -1
     Storage.talkedToMarvin = false
     Storage.openedChiefDoor = false
+    Storage.finishedG1 = false
     Storage.swappedStartingWeapon = false
+    Storage.typewritersActive = true
+    Storage.receivedItemNames = {}
 end
 
 return Storage

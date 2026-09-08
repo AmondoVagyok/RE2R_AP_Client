@@ -5,7 +5,13 @@ function Helpers.gameObject(obj_name)
 end
 
 function Helpers.component(obj, component_namespace)
-    return obj:call("getComponent(System.Type)", sdk.typeof(sdk.game_namespace(component_namespace)))
+    local comp_name = component_namespace
+
+    if not string.find(comp_name, "via.") and not string.find(comp_name, sdk.game_namespace("")) then
+        comp_name = sdk.game_namespace(comp_name)
+    end
+
+    return obj:call("getComponent(System.Type)", sdk.typeof(comp_name))
 end
 
 -- getting transform children is kinda annoying, so here's a helper for it

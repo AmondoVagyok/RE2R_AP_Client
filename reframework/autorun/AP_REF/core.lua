@@ -499,7 +499,7 @@ end
 
 local function ReadConfig()
     config = json.load_file("AP_REF.json")
-    if config ~= nil then
+    if config ~= nil and type(config) == "table" then
         if config["APCurrentPlayerColor"] ~= nil then
             AP_REF.APCurrentPlayerColor = config["APCurrentPlayerColor"]
         end

@@ -97,6 +97,10 @@ function Typewriters.DisplayWarpMenu()
             typewriter_disabled = true
         end
 
+        if not Storage.typewritersActive then
+            typewriter_disabled = true  
+        end
+
         -- if the player has unlocked the typewriter by interacting once, set active color; otherwise, set default
         if Typewriters.unlocked_typewriters[typewriter["item_object"]] and not typewriter_disabled then
             imgui.push_style_color(imgui.COLOR_BUTTON, Vector4f.new(2.5, 2.5, 2.5, 1.00))

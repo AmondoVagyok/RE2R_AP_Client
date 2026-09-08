@@ -1,4 +1,6 @@
 local Tools = {}
+Tools.item_name = nil
+Tools.item_selected_index = nil
 
 function Tools.ShowGUI()
     local scenario_text = '(not connected)'
@@ -38,7 +40,7 @@ function Tools.ShowGUI()
     -- if Scene.isCharacterClaire() then player_character_text = "   Claire" end
     -- if Scene.isCharacterSherry() then player_character_text = "   Sherry" end
 
-    imgui.set_next_window_size(Vector2f.new(320, 750), 0)
+    imgui.set_next_window_size(Vector2f.new(320, 800), 0)
     imgui.begin_window("Archipelago Game Mod ", nil,
         8 -- NoScrollbar
     )
@@ -58,7 +60,7 @@ function Tools.ShowGUI()
 
     imgui.text_colored(" DeathLink: ", -10825765)
     imgui.same_line()
-    imgui.text_colored("                         " .. deathlink_text, deathlink_color)
+    imgui.text_colored("                             " .. deathlink_text, deathlink_color)
 
     if Archipelago.weapon_rando ~= nil then
         imgui.text_colored(" Weapon Randomizer: ", -10825765)
@@ -88,6 +90,14 @@ function Tools.ShowGUI()
 
     imgui.new_line()
 
+    if Archipelago.killsanity ~= nil then
+        imgui.text_colored(" Killsanity: ", -10825765)
+        imgui.same_line()
+        imgui.text("                              " .. Archipelago.killsanity)
+    end
+
+    imgui.new_line()
+
     imgui.separator()
     imgui.text_colored("         The default keyboard key to show or hide", AP_REF.HexToImguiColor('bbbbbb'))
     imgui.text_colored("         these windows is INSERT.", AP_REF.HexToImguiColor('bbbbbb'))
@@ -96,14 +106,37 @@ function Tools.ShowGUI()
     if Lookups.character and Lookups.scenario then
         imgui.new_line()
         imgui.text_colored(" Missing Items?", AP_REF.HexToImguiColor('09ba39'))
-        imgui.text("    If you were sent items at the ")
-        imgui.text("    start and didn't receive them,")
-        imgui.text("    click this button.")
+        imgui.text("    If you were sent items and some ")
+        imgui.text("    are missing, use the options below.")
+
+        imgui.new_line()
+        imgui.text("    Choose an Item: ")
+        imgui.text("  ")
+        imgui.same_line()
+
+        local item_names = Storage.receivedItemNames or {}
+        table.sort(item_names)
+        local changed, value = imgui.combo("", Tools.item_selected_index, item_names)
+        if changed then
+            Tools.item_selected_index = value
+            Tools.item_name = Storage.receivedItemNames[value]
+        end
+
+        imgui.text("  ")
+        imgui.same_line()
+
+        if imgui.button("Receive This Item Again") and Tools.item_name ~= nil then
+            Archipelago.ReceiveItem(Tools.item_name, nil, 1) -- nil for sender, 1 for is_randomized
+        end
+
+        imgui.new_line()
+        imgui.text("                         - OR -")
+        imgui.new_line()
 
         imgui.text("  ")
         imgui.same_line()
         
-        if imgui.button("Receive Items Again") then
+        if imgui.button("Receive ALL Items Again") then
             Storage.lastReceivedItemIndex = -1
             Storage.lastSavedItemIndex = -1
             Archipelago.waitingForSync = true
@@ -133,7 +166,7 @@ function Tools.ShowGUI()
     imgui.text("(main dev)")
     imgui.text_colored("   @Solidus Snake", AP_REF.HexToImguiColor('3e84d6'))
     imgui.same_line()
-    imgui.text("(CA, CB, LB scenarios)")
+    imgui.text("(CA, CB, LB, PopTracker)")
     imgui.text_colored("   @Silvris", AP_REF.HexToImguiColor('3e84d6'))
     imgui.same_line()
     imgui.text("(AP client lib)")
@@ -148,7 +181,7 @@ function Tools.ShowGUI()
     imgui.text("(LB kills)")
     imgui.text_colored("   @Ropeyred", AP_REF.HexToImguiColor('3e84d6'))
     imgui.same_line()
-    imgui.text("(CB kills)")
+    imgui.text("(CB kills, kills fixes, PopTracker)")
     imgui.new_line()
 
     imgui.end_window()

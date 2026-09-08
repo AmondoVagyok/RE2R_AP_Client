@@ -5,6 +5,19 @@ Scene.mainFlowManager = nil
 Scene.interactManager = nil
 Scene.saveDataManager = nil
 Scene.recordManager = nil
+Scene.itemManager = nil
+
+--- A note for a person who has more time in the future
+-- 60_LevelMaster -> CutSceneManager
+--
+
+function Scene.isRTX()
+    local tdb = sdk.get_tdb_version()
+
+    if tdb > 69 then return true end
+
+    return false
+end
 
 local function getManagedSingleton(relativeName)
     local ok, obj = pcall(function()
@@ -149,6 +162,10 @@ function Scene.getGameMaster()
     return Scene.getMasterObject("30_GameMaster")
 end
 
+function Scene.getInventoryMaster()
+    return Scene.getMasterObject("50_InventoryMaster")
+end
+
 function Scene.getGimmickMaster()
     return Scene.getMasterObject("70_GimmickMaster")
 end
@@ -288,6 +305,18 @@ function Scene.getRecordManager()
     return Scene.recordManager
 end
 
+function Scene.getItemManager()
+    if Scene.itemManager ~= nil then
+        return Scene.itemManager
+    end
+
+    local inventoryMaster = Scene.getInventoryMaster()
+
+    Scene.itemManager = inventoryMaster:call("getComponent(System.Type)", sdk.typeof(sdk.game_namespace("gamemastering.ItemManager")))
+
+    return Scene.itemManager
+end
+
 function Scene.getSurvivorType()
     local survivorManager = getManagedSingleton("SurvivorManager")
     if survivorManager == nil then
@@ -334,6 +363,10 @@ end
 
 function Scene.getDifficulty()
     return mainFlowCall("get_CurrentDifficulty", -1)
+end
+
+function Scene.getGUIMap()
+    return Scene.getSceneObject():findGameObject("GUI_Map")
 end
 
 function Scene.isTitleScreen()
@@ -421,6 +454,10 @@ function Scene.isUsingInventory()
         return guiInv:get_DrawSelf()
     end)
     return ok and drawn == true
+end
+
+function Scene.isUsingMap()
+    return Scene.getGUIMap():get_DrawSelf() -- is the Map GUI "drawn"?
 end
 
 function Scene.isCharacterLeon()
