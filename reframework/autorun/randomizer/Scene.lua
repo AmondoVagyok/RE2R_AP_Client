@@ -11,14 +11,6 @@ Scene.itemManager = nil
 -- 60_LevelMaster -> CutSceneManager
 --
 
-function Scene.isRTX()
-    local tdb = sdk.get_tdb_version()
-
-    if tdb > 69 then return true end
-
-    return false
-end
-
 local function getManagedSingleton(relativeName)
     local ok, obj = pcall(function()
         return sdk.get_managed_singleton(sdk.game_namespace(relativeName))
@@ -366,7 +358,7 @@ function Scene.getDifficulty()
 end
 
 function Scene.getGUIMap()
-    return Scene.getSceneObject():findGameObject("GUI_Map")
+    return getGuiObject("GUI_Map")
 end
 
 function Scene.isTitleScreen()

@@ -4,7 +4,6 @@ GUI.lastText = os.time()
 GUI.lastScenarioCheck = nil
 GUI.lastDifficultyCheck = nil
 GUI.lastVersionCheck = nil
-GUI.lastRTXCheck = nil
 GUI.logo = nil
 GUI.font = "Prompt-Medium.ttf"
 GUI.font_size = 24
@@ -224,42 +223,6 @@ function GUI.CheckVersionWarning()
     end
 
     GUI.lastVersionCheck = os.time()
-end
-
-function GUI.CheckRTXWarning(shouldBeRTX)
-    if GUI.lastRTXCheck ~= nil and os.time() - GUI.lastRTXCheck < 17 then -- 17 seconds
-        return
-    end
-
-    -- allows for checking from both the non-rtx and the rtx client, just with a different arg
-    if not shouldBeRTX then shouldBeRTX = false end
-
-    local isRTX = Scene.isRTX()
- 
-    -- easy way to test for RTX without switching to RTX
-    --isRTX = not isRTX
-
-    if isRTX ~= shouldBeRTX then
-        GUI.AddTexts({
-            { message="You are using this AP mod on the " },
-            { message="wrong version", color=AP_REF.HexToImguiColor('fa3d2f')},
-            { message=" of the game." },
-        }, 1) -- add to the front of the messages, at index 1
-        
-        GUI.AddTexts({
-            { message="For this AP mod, " },
-            { message="you must use the " .. ((shouldBeRTX and "RTX") or "non-RTX"), color=AP_REF.HexToImguiColor('fa3d2f') },
-            { message=" version of the game." }    
-        }, 2) -- add this right after the message above
-
-        GUI.AddTexts({
-            { message="See " },
-            { message="step 1 of the Setup Guide", color=AP_REF.HexToImguiColor('fa3d2f') },
-            { message=" for more information." }
-        }, 3) -- add this right after the message above
-    end
-
-    GUI.lastRTXCheck = os.time()
 end
 
 function GUI.ConvertColorFromText(color)
