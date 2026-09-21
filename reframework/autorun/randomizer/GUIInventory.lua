@@ -8,6 +8,9 @@ function GUIInventory.Init()
     GUIInventory.textList = {}
     GUIInventory.AddModHeader()
     GUIInventory.AddModWindowHint()
+    GUIInventory.AddRTXHeader()
+    GUIInventory.AddRTXWIPMessage()
+    GUIInventory.AddRTXBugReportInformation()
     GUIInventory.AddNotSureHeader()
     GUIInventory.AddTypewriterHint()
     GUIInventory.AddTrackerHint()
@@ -103,7 +106,7 @@ end
 
 function GUIInventory.AddModHeader()
     local textObjects = {
-        { message="Welcome to RE2R in AP!", header=true }
+        { message="Welcome to RE2R RTX in AP!", header=true }
     }
     GUIInventory.AddTexts(textObjects)
 end
@@ -114,6 +117,40 @@ function GUIInventory.AddModWindowHint()
         { message="press " },
         { message="Insert", color="green" },
         { message=" on your keyboard.\n\n" },
+        { message="\n\n" },
+        { separator=true }
+    }
+    GUIInventory.AddTexts(textObjects)
+
+    local textObjects = {
+        { message="\n" }
+    }
+    GUIInventory.AddTexts(textObjects)
+end
+
+function GUIInventory.AddRTXHeader()
+    local textObjects = {
+        { message="RTX Specific Information", header = true }
+    }
+    GUIInventory.AddTexts(textObjects)
+end
+
+function GUIInventory.AddRTXWIPMessage()
+    local textObjects = {
+        { message="This RTX client is work in progress!"}
+    }
+    GUIInventory.AddTexts(textObjects)
+end
+
+function GUIInventory.AddRTXBugReportInformation()
+    local textObjects = {
+        { message="If you encounter any " },
+        { message="client-side error", color="green" },
+        { message=", notify \n"  },
+        { message="Solidus Snake", color = "green" },
+        { message=" or " },
+        { message="Amondo", color = "green" },
+        { message=". " },
         { message="\n\n" },
         { separator=true }
     }
