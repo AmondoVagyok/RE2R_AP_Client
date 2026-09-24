@@ -90,6 +90,7 @@ re.on_pre_application_entry("UpdateBehavior", function()
             Archipelago.wasDeathLinked = false
         end
     else
+        CutsceneObjects.isInit = false -- look for objects that should be destroyed and destroy them again
         DestroyObjects.isInit = false -- look for objects that should be destroyed and destroy them again
         ItemDuplicates.isInit = false -- look for duplicate items that should be removed and remove them again
     end
