@@ -11,6 +11,15 @@ Scene.itemManager = nil
 -- 60_LevelMaster -> CutSceneManager
 --
 
+function Scene.isNonRTX()
+    local tdb = sdk.get_tdb_version()
+
+    if tdb < 69 then return true end
+
+    return false
+end
+
+
 local function getManagedSingleton(relativeName)
     local ok, obj = pcall(function()
         return sdk.get_managed_singleton(sdk.game_namespace(relativeName))
